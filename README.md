@@ -6,6 +6,19 @@ The Airswap implementation of Geth clustering in a CloudFormation script
 
 ## Features
 
+Installing Geth is easy. Running Geth at scale can be a headache. Setting up the infrastructure and code required to manage Geth in an automated way requires time and effort. We've made that a single click with a CloudFormation template. Check out the great features:
+
+* TLS capable with optional SSL Certificate
+* Locked down security groups to only allow traffic on ports 80 or 443
+* Load balanced Geth nodes
+* Automatic rotation of unhealthy nodes
+* Automatic health checking for syncing state
+* Custom VPC and subnet compatible
+* Bring your own Infura and Etherscan API keys
+* Proven instance types that will run Geth in production
+* Hardened Geth node for mass RPC queries
+* AWS best practices for infrastructure and security
+* Built by an AWS Solution Architect Professional!
 
 ## Set up
 The setup for the Geth cluster is very simple. First, [click here](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=GethCluster&templateURL=https://s3.amazonaws.com/opensource.airswap.io/geth/cloudformation.yml) to launch the stack or use the hosted template here: [https://s3.amazonaws.com/opensource.airswap.io/geth/cloudformation.yml](https://s3.amazonaws.com/opensource.airswap.io/geth/cloudformation.yml)

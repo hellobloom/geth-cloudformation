@@ -13,6 +13,13 @@ The setup for the Geth cluster is very simple. First, [click here](https://conso
 ### Specify the settings
 ![Parameters](./params.png)
 
+#### Certificate ARN
+The ARN string for the SSL certificate you want on the load balancer. This is useful if you plan to run the cluster in production, as you will be able to access the load balancer via HTTPS.
+
+This field is optional.
+
+If you specify this field, port 80 access is automatically disabled for security. You will need to create a Route 53 record pointing to the load balancer with the correct DNS name.
+
 #### Etherscan API Key
 Prior to starting the stack, you need to register for an Etherscan API key. You can [use the instructions listed here](https://etherscan.io/apis) to create an account and get a new API key.
 

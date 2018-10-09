@@ -40,7 +40,7 @@ jobs:
       - run:
           name: deploy the code
           command: |
-            s3 cp cloudformation.yml s3://opensource.airswap.io/geth/cloudformation.yml  --acl public-read
+            aws s3 cp cloudformation.yml s3://opensource.airswap.io/geth/cloudformation.yml  --acl public-read
 
 workflows:
   version: 2

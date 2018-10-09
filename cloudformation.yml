@@ -1,16 +1,24 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'This template creates an Application Load Balancer and a Launch Configuration, as well as associated security groups, for the Geth node cluster.'
+Description: 'This template creates an Application Load Balancer and a Launch
+Configuration, as well as associated security groups, for a Geth node cluster.'
 Parameters:
   VpcId:
     Type: AWS::EC2::VPC::Id
     Description: VpcId of your existing Virtual Private Cloud (VPC)
-    ConstraintDescription: must be the VPC Id of an existing Virtual Private Cloud.
+    ConstraintDescription: |
+      must be the VPC Id of an existing Virtual Private Cloud.
+  CertificateARN:
+    Type: String
+    Description: (Optional) SSL certificate ARN
+    ConstraintDescription: |
+      must be a valid and issued SSL certificate managed by ACM
   Subnets:
     Type: List<AWS::EC2::Subnet::Id>
     Description: The list of SubnetIds in your Virtual Private Cloud (VPC)
-    ConstraintDescription: must be a list of at least two existing subnets associated
-      with at least two different availability zones. They should be residing in the
-      selected Virtual Private Cloud.
+    ConstraintDescription: |
+      must be a list of at least two existing subnets associated
+      with at least two different availability zones. They should be
+      residing in the selected Virtual Private Cloud.
   InstanceType:
     Description: WebServer EC2 instance type
     Type: String
@@ -38,7 +46,8 @@ Parameters:
     ConstraintDescription: must be a valid string
     Type: String
   KeyName:
-    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Description: |
+      Name of an existing EC2 KeyPair to enable SSH access to the instances
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
   SSHLocation:
@@ -49,33 +58,13 @@ Parameters:
     Default: 0.0.0.0/0
     AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+Conditions:
+  IsSSL:
+    Fn::Not:
+    - Fn::Equals:
+      - ''
+      - Ref: CertificateARN
 Mappings:
-  AWSInstanceType2Arch:
-    i3.large:
-      Arch: HVM64
-    i3.16xlarge:
-      Arch: HVM64
-    i3.xlarge:
-      Arch: HVM64
-    i3.2xlarge:
-      Arch: HVM64
-    i3.4xlarge:
-      Arch: HVM64
-    i3.8xlarge:
-      Arch: HVM64
-  AWSInstanceType2NATArch:
-    i3.large:
-      Arch: NATHVM64
-    i3.16xlarge:
-      Arch: NATHVM64
-    i3.xlarge:
-      Arch: NATHVM64
-    i3.2xlarge:
-      Arch: NATHVM64
-    i3.4xlarge:
-      Arch: NATHVM64
-    i3.8xlarge:
-      Arch: NATHVM64
   AWSRegionArch2AMI:
     us-east-1:
       HVM64: ami-759bc50a
@@ -153,10 +142,7 @@ Resources:
         Fn::FindInMap:
         - AWSRegionArch2AMI
         - Ref: AWS::Region
-        - Fn::FindInMap:
-          - AWSInstanceType2Arch
-          - Ref: InstanceType
-          - Arch
+        - HVM64
       SecurityGroups:
       - Ref: InstanceSecurityGroup
       InstanceType:
@@ -307,8 +293,10 @@ Resources:
           Ref: ALBTargetGroup
       LoadBalancerArn:
         Ref: ApplicationLoadBalancer
-      Port: '80'
-      Protocol: HTTP
+      Port: !If [IsSSL, 443, 80]
+      Protocol: !If [IsSSL, HTTPS, HTTP]
+      Certificates:
+        - CertificateArn: !If [IsSSL, !Ref CertificateARN, !Ref "AWS::NoValue"]
   ALBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -350,11 +338,11 @@ Resources:
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable HTTP access on the load balancer
+      GroupDescription: Enable HTTP(S) access on the load balancer
       SecurityGroupIngress:
       - IpProtocol: tcp
-        FromPort: '80'
-        ToPort: '80'
+        FromPort: !If [IsSSL, 443, 80]
+        ToPort: !If [IsSSL, 443, 80]
         CidrIp: 0.0.0.0/0
       VpcId:
         Ref: VpcId
@@ -364,14 +352,23 @@ Outputs:
     Value:
       Fn::Join:
       - ''
-      - - http://
+      - - http
+        - !If [IsSSL, s, '']
+        - ://
         - Fn::GetAtt:
           - ApplicationLoadBalancer
           - DNSName
   CurlThis:
-    Description: Execute this curl command via a CLI to see your new nodes syncing
-    Value: !Sub |
-      curl -X POST
-      http://${ApplicationLoadBalancer.DNSName}
-      -H 'Content-Type: application/json'
-      -d '{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":1}'
+    Description: |
+      Execute this curl command via a CLI to see your new nodes syncing
+    Value:
+      "Fn::Sub":
+        - |
+          curl -X POST
+          ${PROTOCOL}://${URL}
+          -H 'Content-Type: application/json'
+          -d '{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":1}' -k
+        - {
+            PROTOCOL: !If [IsSSL, https, http],
+            URL: !GetAtt [ ApplicationLoadBalancer, DNSName ],
+          }

@@ -164,6 +164,7 @@ Resources:
                   Restart=always
                   RestartSec=3
                   ExecStart=/usr/bin/geth \
+                    --shh
                     --cache 4096 \
                     --datadir /mnt \
                     --maxpeers 50 \
